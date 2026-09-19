@@ -1,0 +1,62 @@
+{
+  "metadata": {
+    "type": "synthetic_test_fixture",
+    "live_result": false,
+    "credentials_included": false
+  },
+  "tenant": {
+    "id": "00000000-0000-0000-0000-000000000001",
+    "name": "Demo Builder",
+    "status": "ACTIVE"
+  },
+  "project": {
+    "id": "00000000-0000-0000-0000-000000000101",
+    "tenant_id": "00000000-0000-0000-0000-000000000001",
+    "name": "Demo Residency",
+    "knowledge": {
+      "city": "Jaipur",
+      "configurations": [
+        "2 BHK",
+        "3 BHK"
+      ],
+      "verified_facts": [
+        "Synthetic demo data only."
+      ]
+    }
+  },
+  "lead": {
+    "id": "00000000-0000-0000-0000-000000000201",
+    "tenant_id": "00000000-0000-0000-0000-000000000001",
+    "source": "meta",
+    "source_lead_id": "DEMO_META_LEAD_001",
+    "project_id": "00000000-0000-0000-0000-000000000101",
+    "name": "Rahul Sharma",
+    "phone": "+919876543210",
+    "email": "rahul.demo@example.com",
+    "property_type": "3 BHK",
+    "budget": "80 lakh",
+    "location": "Jaipur",
+    "timeline": "3 months",
+    "message": "Looking for a 3 BHK around 80 lakh.",
+    "consent": true,
+    "status": "NEW"
+  },
+  "messages": [
+    {
+      "external_message_id": "DEMO_WA_001",
+      "text": "3 BHK around 80 lakh."
+    },
+    {
+      "external_message_id": "DEMO_WA_002",
+      "text": "Yes, I am interested. Can someone call me?"
+    },
+    {
+      "external_message_id": "DEMO_WA_003",
+      "text": "STOP"
+    },
+    {
+      "external_message_id": "DEMO_WA_004",
+      "text": "Connect me with a person."
+    }
+  ]
+}

@@ -1,0 +1,1038 @@
+{
+  "name": "🏠 AI Real Estate Marketing Kit — Full System",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'You are an expert real estate visual marketing specialist and AI image prompt engineer. Based on this property listing, create TWO detailed image generation prompts that will produce stunning marketing visuals for Instagram and LinkedIn.\\n\\nPROPERTY:\\nTitle: ' + $json.propertyTitle + '\\nLocation: ' + $json.location + '\\nPrice: ' + $json.price + '\\nConfig: ' + $json.config + ' | Area: ' + $json.area + '\\nFeatures: ' + $json.features + '\\nBuilder: ' + $json.builder + '\\nPossession: ' + $json.possession + ' | ' + $json.furnishing + '\\n\\nReturn EXACT JSON (no markdown, no backticks):\\n{\\n  \"instagram_image_prompt\": \"A highly detailed, photorealistic AI image generation prompt for Instagram. Should show a luxurious, aspirational interior or exterior scene that matches this property. Include: lighting style (golden hour / soft natural / cinematic), camera angle, mood, specific architectural elements matching the property features, color palette matching the location. Make it scroll-stopping. Under 150 words.\",\\n  \"linkedin_image_prompt\": \"A professional, premium AI image generation prompt for LinkedIn. Should convey prestige, investment value, and lifestyle. More architectural exterior or aerial perspective style. Professional tone. Mentions skyline or landmark if applicable. Under 150 words.\",\\n  \"instagram_caption\": \"Ready-to-post Instagram caption for this AI-generated visual. Aspirational tone. Emojis. 20 hashtags. Under 150 words.\",\\n  \"linkedin_caption\": \"Ready-to-post LinkedIn caption. Professional investor tone. Focus on lifestyle and ROI. Max 5 hashtags. Under 120 words.\"\\n}' }] }], generationConfig: { temperature: 0.8, maxOutputTokens: 1500 } }) }}",
+        "options": {}
+      },
+      "id": "2fb7873a-a3d5-45b5-b96d-fc2a1bfeb4c2",
+      "name": "🤖 Gemini: Create Image Prompts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -256,
+        3392
+      ],
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "j5pDDKdjpHXdbyhV",
+          "name": "Query Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const aiResp = $input.first().json;\nconst prop = $('🔧 Parse Property Details').first().json;\n\nlet prompts = {};\ntry {\n  const raw = aiResp?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';\n  prompts = JSON.parse(raw.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim());\n} catch(e) {\n  prompts = {\n    instagram_image_prompt: `Photorealistic luxury ${prop.config} apartment interior, ${prop.location}, golden hour lighting, modern design, marble floors, panoramic windows, cinematic composition, 8K quality`,\n    linkedin_image_prompt: `Premium real estate exterior, ${prop.location} skyline, architectural photography, sunset lighting, luxury residential building, professional composition`,\n    instagram_caption: `✨ Dream home alert! ${prop.propertyTitle}\\n📍 ${prop.location}\\n💰 ${prop.price}\\n\\nContact us today!`,\n    linkedin_caption: `Presenting an exceptional investment opportunity: ${prop.propertyTitle} at ${prop.price}. Prime ${prop.location} location.`\n  };\n}\n\nreturn [{ json: { ...prop, prompts } }];"
+      },
+      "id": "85f88bc7-a1b9-4599-8b25-eb640ddbf369",
+      "name": "🔀 Parse Image Prompts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -32,
+        3392
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ contents: [{ role: 'user', parts: [{ text: $json.prompts.instagram_image_prompt + '. Style: Instagram marketing post, square format 1:1, vibrant, premium real estate photography aesthetic, ultra high quality.' }] }], generationConfig: { responseModalities: ['image', 'text'], temperature: 0.8 } }) }}",
+        "options": {}
+      },
+      "id": "a81e140c-6192-476a-b098-7dc70e611fe8",
+      "name": "🎨 Gemini Image: Generate Instagram Visual",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        192,
+        3392
+      ],
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "j5pDDKdjpHXdbyhV",
+          "name": "Query Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ contents: [{ role: 'user', parts: [{ text: $('🔀 Parse Image Prompts').first().json.prompts.linkedin_image_prompt + '. Style: Professional LinkedIn banner, landscape 16:9 format, premium architectural photography, clean corporate aesthetic, ultra high quality.' }] }], generationConfig: { responseModalities: ['image', 'text'], temperature: 0.8 } }) }}",
+        "options": {}
+      },
+      "id": "d1ba644a-c84d-4fbb-81b7-f4e0a4a9649b",
+      "name": "🎨 Gemini Image: Generate LinkedIn Visual",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        416,
+        3392
+      ],
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "j5pDDKdjpHXdbyhV",
+          "name": "Query Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const instaResp = $('🎨 Gemini Image: Generate Instagram Visual').first().json;\nconst linkedinResp = $input.first().json;\nconst prop = $('🔀 Parse Image Prompts').first().json;\nconst prompts = prop.prompts || {};\n\n// Extract Instagram image base64\nlet instaImageBase64 = null;\nlet instaImageMime = 'image/png';\ntry {\n  const parts = instaResp?.candidates?.[0]?.content?.parts || [];\n  for (const part of parts) {\n    if (part.inlineData || part.inline_data) {\n      const d = part.inlineData || part.inline_data;\n      instaImageBase64 = d.data;\n      instaImageMime = d.mimeType || 'image/png';\n      break;\n    }\n  }\n} catch(e) {}\n\n// Extract LinkedIn image base64\nlet linkedinImageBase64 = null;\nlet linkedinImageMime = 'image/png';\ntry {\n  const parts = linkedinResp?.candidates?.[0]?.content?.parts || [];\n  for (const part of parts) {\n    if (part.inlineData || part.inline_data) {\n      const d = part.inlineData || part.inline_data;\n      linkedinImageBase64 = d.data;\n      linkedinImageMime = d.mimeType || 'image/png';\n      break;\n    }\n  }\n} catch(e) {}\n\nconst hasInsta = !!instaImageBase64;\nconst hasLinkedin = !!linkedinImageBase64;\n\n// Build HTML email body\nconst c = {bg:'#0d1117',card:'#161b22',border:'#1e293b',orange:'#f97316',blue:'#2563eb',pink:'#ec4899',purple:'#8b5cf6',white:'#ffffff',light:'#e2e8f0',gray:'#94a3b8',green:'#22c55e',teal:'#0d9488'};\n\nconst emailBody = '<div style=\"background:'+c.bg+';padding:0;font-family:Segoe UI,Arial,sans-serif;max-width:650px;margin:0 auto;\">' +\n'<div style=\"background:linear-gradient(135deg,#ec4899 0%,#8b5cf6 100%);padding:28px 24px;text-align:center;border-radius:8px 8px 0 0;\">' +\n'<h1 style=\"margin:0;color:#fff;font-size:18px;font-weight:800;\">🎨 AI-Generated Marketing Visuals</h1>' +\n'<p style=\"margin:6px 0 0;color:#fce7f3;font-size:13px;\">'+prop.propertyTitle+' | '+prop.price+'</p></div>' +\n'<div style=\"background:'+c.card+';padding:20px;border:1px solid '+c.border+';border-top:none;border-radius:0 0 8px 8px;\">' +\n'<p style=\"color:'+c.light+';font-size:14px;margin:0 0 16px;\">Hi '+prop.agentName+', your AI-generated property marketing visuals are ready. ' + (hasInsta || hasLinkedin ? 'Images are attached to this email.' : 'Image generation encountered an issue — please see captions below to retry manually.') + '</p>' +\n\n'<div style=\"background:'+c.bg+';border-radius:8px;padding:14px;margin:0 0 16px;border-left:4px solid #ec4899;\">' +\n'<p style=\"color:#ec4899;font-size:13px;font-weight:700;margin:0 0 8px;\">📸 INSTAGRAM VISUAL</p>' +\n'<p style=\"color:'+c.gray+';font-size:11px;margin:0 0 8px;\">Prompt used: '+( prompts.instagram_image_prompt || '' ).substring(0,120)+'...</p>' +\n(hasInsta ? '<p style=\"color:'+c.green+';font-size:12px;margin:0 0 8px;\">✅ Image attached as: Instagram_Visual_'+prop.propertyTitle.replace(/[^a-zA-Z0-9]/g,'_').substring(0,20)+'.png</p>' : '<p style=\"color:#ef4444;font-size:12px;margin:0 0 8px;\">⚠️ Image generation failed — rate limit may have been hit. Retry manually.</p>') +\n'<p style=\"color:'+c.gray+';font-size:10px;margin:0 0 6px;text-transform:uppercase;letter-spacing:1px;\">INSTAGRAM CAPTION (copy-paste with the image):</p>' +\n'<p style=\"color:'+c.light+';font-size:13px;line-height:1.6;margin:0;white-space:pre-wrap;\">'+(prompts.instagram_caption || '').replace(/</g,'&lt;')+'</p></div>' +\n\n'<div style=\"background:'+c.bg+';border-radius:8px;padding:14px;margin:0 0 16px;border-left:4px solid #0077b5;\">' +\n'<p style=\"color:#0077b5;font-size:13px;font-weight:700;margin:0 0 8px;\">💼 LINKEDIN VISUAL</p>' +\n'<p style=\"color:'+c.gray+';font-size:11px;margin:0 0 8px;\">Prompt used: '+(prompts.linkedin_image_prompt || '').substring(0,120)+'...</p>' +\n(hasLinkedin ? '<p style=\"color:'+c.green+';font-size:12px;margin:0 0 8px;\">✅ Image attached as: LinkedIn_Visual_'+prop.propertyTitle.replace(/[^a-zA-Z0-9]/g,'_').substring(0,20)+'.png</p>' : '<p style=\"color:#ef4444;font-size:12px;margin:0 0 8px;\">⚠️ Image generation failed — rate limit may have been hit. Retry manually.</p>') +\n'<p style=\"color:'+c.gray+';font-size:10px;margin:0 0 6px;text-transform:uppercase;letter-spacing:1px;\">LINKEDIN CAPTION (copy-paste with the image):</p>' +\n'<p style=\"color:'+c.light+';font-size:13px;line-height:1.6;margin:0;white-space:pre-wrap;\">'+(prompts.linkedin_caption || '').replace(/</g,'&lt;')+'</p></div>' +\n\n'<div style=\"background:#f59e0b22;border-radius:6px;padding:10px 14px;margin:0;border:1px solid #f59e0b44;\">' +\n'<p style=\"color:#f59e0b;font-size:12px;margin:0;\">💡 These are AI-generated concept visuals. Use them as teasers, mood boards, or \"coming soon\" posts while your professional photos are being shot.</p></div>' +\n'</div></div>';\n\n// Prepare binary attachments\nconst binaryData = {};\n\nif (hasInsta) {\n  binaryData['instagramVisual'] = {\n    data: instaImageBase64,\n    mimeType: instaImageMime,\n    fileName: 'Instagram_Visual_' + prop.propertyTitle.replace(/[^a-zA-Z0-9]/g,'_').substring(0,25) + '.png',\n    fileExtension: 'png'\n  };\n}\n\nif (hasLinkedin) {\n  binaryData['linkedinVisual'] = {\n    data: linkedinImageBase64,\n    mimeType: linkedinImageMime,\n    fileName: 'LinkedIn_Visual_' + prop.propertyTitle.replace(/[^a-zA-Z0-9]/g,'_').substring(0,25) + '.png',\n    fileExtension: 'png'\n  };\n}\n\nreturn [{\n  json: {\n    agentEmail: prop.agentEmail,\n    agentName: prop.agentName,\n    propertyTitle: prop.propertyTitle,\n    price: prop.price,\n    emailBody,\n    hasInsta,\n    hasLinkedin\n  },\n  binary: binaryData\n}];"
+      },
+      "id": "f79a144f-9e63-4f80-b26a-ecb652783e6e",
+      "name": "📦 Package Images + Captions",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        3392
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.agentEmail }}",
+        "subject": "={{ '🎨 AI Marketing Visuals Ready: ' + $json.propertyTitle + ' | Instagram + LinkedIn Images' }}",
+        "message": "={{ $json.emailBody }}",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {
+                "property": "instagramVisual"
+              },
+              {
+                "property": "linkedinVisual"
+              }
+            ]
+          }
+        }
+      },
+      "id": "824bfc60-298d-47dd-8949-731016421e6f",
+      "name": "📧 Send Visuals to Agent",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        864,
+        3392
+      ],
+      "webhookId": "a1cf7080-a191-42da-9e42-04cb423881fd",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "lr7mEtd9F7XIfoGz",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $('🔀 Parse Marketing Kit').first().json;\nconst k = d.kit;\nconst c = { bg:'#0d1117', card:'#161b22', border:'#1e293b', blue:'#2563eb', green:'#22c55e', orange:'#f97316', teal:'#0d9488', purple:'#8b5cf6', white:'#ffffff', light:'#e2e8f0', gray:'#94a3b8' };\n\nconst channels = [\n  { name: '99acres / MagicBricks', status: 'Ready to publish', clr: c.blue },\n  { name: 'Housing.com / NoBroker', status: 'Ready to publish', clr: c.blue },\n  { name: 'Instagram Post + Story', status: 'Content ready', clr: c.purple },\n  { name: 'Facebook Marketplace', status: 'Content ready', clr: c.blue },\n  { name: 'WhatsApp Broadcast', status: 'Message ready to send', clr: c.green },\n  { name: 'Broker Network Pitch', status: 'Email ready', clr: c.orange },\n  { name: 'Buyer Follow-Up Sequence', status: '3 emails activated', clr: c.teal }\n];\n\nconst chRows = channels.map(ch =>\n  '<tr><td style=\"padding:10px 12px;border-bottom:1px solid ' + c.border + ';\">' +\n  '<table style=\"border-collapse:collapse;\"><tr>' +\n  '<td style=\"width:28px;vertical-align:top;\"><div style=\"width:22px;height:22px;background:' + ch.clr + '22;border-radius:50%;text-align:center;line-height:22px;font-size:12px;\">✅</div></td>' +\n  '<td style=\"padding-left:10px;\"><span style=\"color:' + c.white + ';font-size:13px;font-weight:600;\">' + ch.name + '</span><br><span style=\"color:' + ch.clr + ';font-size:11px;\">' + ch.status + '</span></td>' +\n  '</tr></table></td></tr>'\n).join('');\n\nconst ownerEmail =\n  '<div style=\"background:' + c.bg + ';padding:0;font-family:Segoe UI,Arial,sans-serif;max-width:700px;margin:0 auto;\">' +\n  '<div style=\"background:linear-gradient(135deg,#2563eb 0%,#1d4ed8 100%);padding:32px 24px;text-align:center;border-radius:8px 8px 0 0;\">' +\n  '<div style=\"font-size:36px;margin:0 0 8px;\">🏠</div>' +\n  '<h1 style=\"margin:0;color:#fff;font-size:20px;font-weight:800;\">Your Property Marketing Plan Is Live</h1>' +\n  '<p style=\"margin:8px 0 0;color:#bfdbfe;font-size:14px;\">' + d.propertyTitle + ' | ' + d.price + '</p>' +\n  '</div>' +\n  '<div style=\"background:' + c.card + ';padding:24px;border:1px solid ' + c.border + ';border-top:none;\">' +\n  '<p style=\"color:' + c.light + ';font-size:14px;line-height:1.7;margin:0 0 20px;\">' + (k.owner_report_summary || 'Thank you for trusting ' + d.agencyName + ' with your property. Your marketing plan has been activated across multiple channels.') + '</p>' +\n  '<div style=\"background:' + c.bg + ';border-radius:8px;padding:14px;margin:0 0 20px;border:1px solid ' + c.border + ';\">' +\n  '<h3 style=\"margin:0 0 8px;color:' + c.orange + ';font-size:14px;\">📊 PROPERTY SUMMARY</h3>' +\n  '<table style=\"width:100%;border-collapse:collapse;\">' +\n  '<tr><td style=\"padding:5px 0;color:' + c.gray + ';width:110px;font-size:12px;\">Property</td><td style=\"padding:5px 0;color:' + c.white + ';font-size:13px;font-weight:600;\">' + d.propertyTitle + '</td></tr>' +\n  '<tr><td style=\"padding:5px 0;color:' + c.gray + ';font-size:12px;\">Location</td><td style=\"padding:5px 0;color:' + c.white + ';font-size:13px;\">' + d.location + '</td></tr>' +\n  '<tr><td style=\"padding:5px 0;color:' + c.gray + ';font-size:12px;\">Configuration</td><td style=\"padding:5px 0;color:' + c.white + ';font-size:13px;\">' + d.config + ' | ' + d.area + '</td></tr>' +\n  '<tr><td style=\"padding:5px 0;color:' + c.gray + ';font-size:12px;\">Listed Price</td><td style=\"padding:5px 0;color:' + c.green + ';font-size:15px;font-weight:800;\">' + d.price + '</td></tr>' +\n  '<tr><td style=\"padding:5px 0;color:' + c.gray + ';font-size:12px;\">Listed For</td><td style=\"padding:5px 0;color:' + c.white + ';font-size:13px;\">' + d.transactionType + '</td></tr>' +\n  '</table></div>' +\n  '<div style=\"background:' + c.bg + ';border-radius:8px;padding:14px;margin:0 0 20px;border:1px solid ' + c.border + ';\">' +\n  '<h3 style=\"margin:0 0 12px;color:' + c.blue + ';font-size:14px;\">📣 MARKETING CHANNELS ACTIVATED</h3>' +\n  '<table style=\"width:100%;border-collapse:collapse;\">' + chRows + '</table></div>' +\n  '<div style=\"background:' + c.bg + ';border-radius:8px;padding:14px;margin:0 0 20px;border:1px solid ' + c.border + ';\">' +\n  '<h3 style=\"margin:0 0 8px;color:' + c.teal + ';font-size:14px;\">📝 YOUR PROPERTY DESCRIPTION</h3>' +\n  '<p style=\"color:' + c.light + ';font-size:13px;line-height:1.6;margin:0;\">' + (k.portal_description_99acres || '') + '</p></div>' +\n  '<div style=\"background:' + c.bg + ';border-radius:8px;padding:14px;margin:0 0 20px;border:1px solid ' + c.border + ';\">' +\n  '<h3 style=\"margin:0 0 8px;color:' + c.green + ';font-size:14px;\">📅 WHAT TO EXPECT</h3>' +\n  '<table style=\"width:100%;border-collapse:collapse;\">' +\n  '<tr><td style=\"padding:6px 0;color:' + c.light + ';font-size:13px;\">📌 Your listing goes live on portals within 24 hours</td></tr>' +\n  '<tr><td style=\"padding:6px 0;color:' + c.light + ';font-size:13px;\">📌 Social media posts published within 48 hours</td></tr>' +\n  '<tr><td style=\"padding:6px 0;color:' + c.light + ';font-size:13px;\">📌 WhatsApp broadcast sent to our qualified buyer database</td></tr>' +\n  '<tr><td style=\"padding:6px 0;color:' + c.light + ';font-size:13px;\">📌 First inquiries expected within 3-5 business days</td></tr>' +\n  '<tr><td style=\"padding:6px 0;color:' + c.light + ';font-size:13px;\">📌 You will receive a weekly performance update every Monday</td></tr>' +\n  '</table></div>' +\n  '<div style=\"margin:20px 0 0;padding:16px 0 0;border-top:1px solid ' + c.border + ';\">' +\n  '<p style=\"color:' + c.light + ';font-size:14px;margin:0 0 12px;\">We are fully committed to getting your property the best possible deal. Please feel free to reach out anytime.</p>' +\n  '<table style=\"border-collapse:collapse;\"><tr>' +\n  '<td style=\"padding-right:12px;vertical-align:top;\"><div style=\"width:44px;height:44px;background:' + c.blue + ';border-radius:50%;text-align:center;line-height:44px;color:#fff;font-size:18px;font-weight:800;\">' + d.agentName.charAt(0).toUpperCase() + '</div></td>' +\n  '<td style=\"vertical-align:top;\"><p style=\"margin:0;color:' + c.blue + ';font-size:14px;font-weight:700;\">' + d.agentName + '</p>' +\n  '<p style=\"margin:2px 0 0;color:' + c.gray + ';font-size:12px;\">' + d.agencyName + '</p>' +\n  '<p style=\"margin:2px 0 0;color:' + c.light + ';font-size:12px;\">📞 ' + d.agentPhone + ' | ✉️ ' + d.agentEmail + '</p>' +\n  '</td></tr></table></div>' +\n  '</div>' +\n  '<div style=\"background:' + c.bg + ';padding:12px;text-align:center;border-radius:0 0 8px 8px;border:1px solid ' + c.border + ';border-top:none;\">' +\n  '<p style=\"color:#475569;font-size:11px;margin:0;\">' + d.agencyName + ' • Property Marketing Report • ' + d.dateGenerated + '</p></div></div>';\n\nreturn [{ json: { ...d, ownerEmailHTML: ownerEmail } }];"
+      },
+      "id": "21988d69-51ae-42c6-9c43-37d716e4a15d",
+      "name": "📝 Build Owner Report Email1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        3120
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.ownerEmail }}",
+        "subject": "={{ '📊 Your Property Marketing Plan Is Live — ' + $json.propertyTitle + ' | ' + $json.agencyName }}",
+        "message": "={{ $json.ownerEmailHTML }}",
+        "options": {
+          "replyTo": "={{ $json.agentEmail }}"
+        }
+      },
+      "id": "35482b60-80c7-40f5-a5b8-f8fbe440de3b",
+      "name": "📧 Send Report to Owner1",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        864,
+        3120
+      ],
+      "webhookId": "b0f3d14b-a7fc-4eec-879d-136167bfcca7",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "lr7mEtd9F7XIfoGz",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "formTitle": "🏠 AI Real Estate Marketing Kit",
+        "formDescription": "Enter property details. AI will generate the complete marketing package — portal descriptions, social media posts, broker pitch, neighbourhood guide, open house invite, and follow-up emails.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Property Title",
+              "fieldType": "string",
+              "placeholder": "e.g. 3BHK Luxury Apartment in Gurgaon Sector 49",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Property Type",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Apartment / Flat"
+                  },
+                  {
+                    "option": "Independent House / Villa"
+                  },
+                  {
+                    "option": "Builder Floor"
+                  },
+                  {
+                    "option": "Penthouse"
+                  },
+                  {
+                    "option": "Plot / Land"
+                  },
+                  {
+                    "option": "Commercial Office Space"
+                  },
+                  {
+                    "option": "Commercial Shop / Showroom"
+                  },
+                  {
+                    "option": "Farmhouse"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Transaction Type",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Sale"
+                  },
+                  {
+                    "option": "Rent"
+                  },
+                  {
+                    "option": "Lease"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Price",
+              "fieldType": "string",
+              "placeholder": "e.g. 1.2 Cr or 45,000/month",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Location / Address",
+              "fieldType": "string",
+              "placeholder": "e.g. Sector 49, Gurgaon, Haryana",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Area (sq ft)",
+              "fieldType": "string",
+              "placeholder": "e.g. 1850 sq ft",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Bedrooms / Configuration",
+              "fieldType": "string",
+              "placeholder": "e.g. 3 BHK or 5000 sq ft office",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Key Features & Amenities",
+              "fieldType": "textarea",
+              "placeholder": "e.g. Modular kitchen, marble flooring, 2 covered parking, swimming pool, gym, clubhouse, 24x7 security, power backup, near metro station, schools nearby",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Builder / Society Name",
+              "fieldType": "string",
+              "placeholder": "e.g. DLF The Crest or Godrej Air"
+            },
+            {
+              "fieldLabel": "Possession Status",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Ready to Move"
+                  },
+                  {
+                    "option": "Under Construction - 2025"
+                  },
+                  {
+                    "option": "Under Construction - 2026"
+                  },
+                  {
+                    "option": "Under Construction - 2027"
+                  },
+                  {
+                    "option": "New Launch"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Furnishing",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Fully Furnished"
+                  },
+                  {
+                    "option": "Semi Furnished"
+                  },
+                  {
+                    "option": "Unfurnished"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Target Buyer Profile",
+              "fieldType": "textarea",
+              "placeholder": "e.g. IT professionals, families with school-going children, NRI investors, first-time homebuyers"
+            },
+            {
+              "fieldLabel": "Open House Date (if planned)",
+              "fieldType": "string",
+              "placeholder": "e.g. Sunday, 18 May 2026, 11 AM - 2 PM"
+            },
+            {
+              "fieldLabel": "Owner Name",
+              "fieldType": "string",
+              "placeholder": "Property owner's full name",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Owner Email",
+              "fieldType": "string",
+              "placeholder": "owner@email.com",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Owner Phone",
+              "fieldType": "string",
+              "placeholder": "+91 98765 43210",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Agent / Broker Name",
+              "fieldType": "string",
+              "placeholder": "Your name",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Agency Name",
+              "fieldType": "string",
+              "placeholder": "e.g. PropMart Realty",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Agent Phone",
+              "fieldType": "string",
+              "placeholder": "+91 98765 43210",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Agent Email",
+              "fieldType": "string",
+              "placeholder": "agent@agency.com",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Reference Image",
+              "fieldType": "file"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "feb610fa-4759-4015-bfd4-39222391323a",
+      "name": "📋 Property Listing Form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        -704,
+        3232
+      ],
+      "webhookId": "07bce28e-f695-48dd-9e82-a39b7cf924b4"
+    },
+    {
+      "parameters": {
+        "jsCode": "const f = $input.first().json;\nconst get = (k) => (f[k] || '').trim();\n\nreturn [{ json: {\n  propertyTitle: get('Property Title'),\n  propertyType: get('Property Type'),\n  transactionType: get('Transaction Type'),\n  price: get('Price'),\n  location: get('Location / Address'),\n  area: get('Area (sq ft)'),\n  config: get('Bedrooms / Configuration'),\n  features: get('Key Features & Amenities'),\n  builder: get('Builder / Society Name'),\n  possession: get('Possession Status'),\n  furnishing: get('Furnishing'),\n  targetBuyer: get('Target Buyer Profile') || 'Families, working professionals, and investors',\n  openHouseDate: get('Open House Date (if planned)'),\n  ownerName: get('Owner Name'),\n  ownerEmail: get('Owner Email'),\n  ownerPhone: get('Owner Phone'),\n  agentName: get('Agent / Broker Name'),\n  agencyName: get('Agency Name'),\n  agentPhone: get('Agent Phone'),\n  agentEmail: get('Agent Email'),\n  timestamp: new Date().toISOString(),\n  dateGenerated: new Date().toLocaleDateString('en-IN', { year:'numeric', month:'long', day:'numeric' })\n}}];"
+      },
+      "id": "04463cb1-540d-4516-af96-9c664ffe78ca",
+      "name": "🔧 Parse Property Details",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -480,
+        3232
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'You are an expert Indian real estate marketing specialist. Generate a COMPLETE marketing kit for this property listing.\\n\\nPROPERTY DETAILS:\\nTitle: ' + $json.propertyTitle + '\\nType: ' + $json.propertyType + '\\nTransaction: ' + $json.transactionType + '\\nPrice: ' + $json.price + '\\nLocation: ' + $json.location + '\\nArea: ' + $json.area + '\\nConfiguration: ' + $json.config + '\\nFeatures: ' + $json.features + '\\nBuilder/Society: ' + $json.builder + '\\nPossession: ' + $json.possession + '\\nFurnishing: ' + $json.furnishing + '\\nTarget Buyers: ' + $json.targetBuyer + '\\nOpen House: ' + ($json.openHouseDate || 'Not scheduled yet') + '\\nAgent: ' + $json.agentName + ' | ' + $json.agencyName + ' | ' + $json.agentPhone + '\\nOwner: ' + $json.ownerName + '\\n\\nGenerate this EXACT JSON:\\n{\\n  \"portal_description_99acres\": \"Professional 200-word property description for 99acres/MagicBricks. Include all specs, amenities, location advantages. End with call-to-action.\",\\n  \"portal_description_short\": \"Crisp 50-word description for Housing.com or NoBroker style listing.\",\\n  \"portal_description_seo\": \"SEO-optimized 150-word description with keywords like buy/rent [config] in [location], [builder] [location] price, etc.\",\\n  \"instagram_caption\": \"Engaging Instagram post caption with emojis, property highlights, location tags, and call-to-action. Under 150 words. Include 15 relevant hashtags.\",\\n  \"instagram_story_text\": \"Short punchy text for Instagram story (under 30 words) with emoji and swipe up CTA.\",\\n  \"facebook_post\": \"Facebook marketplace style post. Detailed but conversational. Include all key details and CTA to contact.\",\\n  \"whatsapp_broadcast\": \"WhatsApp forward-friendly message. Formatted with emojis and line breaks. All key details. Under 200 words. End with agent contact.\",\\n  \"whatsapp_short\": \"Ultra-short WhatsApp message for quick sharing. Under 50 words with key specs and price.\",\\n  \"broker_pitch\": \"Professional email pitch to other brokers/channel partners offering this property for co-broking. Include commission mention. Under 150 words.\",\\n  \"neighbourhood_guide\": \"300-word neighbourhood guide covering: connectivity (metro, highway, airport distance), schools, hospitals, malls, restaurants, parks, upcoming development, why this location is great for the target buyer.\",\\n  \"open_house_invite\": \"Professional open house invitation with date, time, address, what to expect, RSVP details. Warm and inviting tone. Under 100 words.\",\\n  \"buyer_followup_email_1\": \"Follow-up email for interested buyer who visited or inquired. Warm, personal, includes property highlights and next step (site visit or call). Under 100 words.\",\\n  \"buyer_followup_email_2\": \"Second follow-up (5 days later) with urgency. Mention other interested parties. Offer to arrange another visit. Under 80 words.\",\\n  \"buyer_followup_email_3\": \"Final gentle follow-up (10 days later). No pressure. Leave door open. Under 60 words.\",\\n  \"comparison_points\": [\"5 key selling points that differentiate this property from competitors in the same area\"],\\n  \"objection_handling\": [{\"objection\": \"Common buyer objection\", \"response\": \"Professional response to overcome it\"}],\\n  \"price_justification\": \"3-4 sentences explaining why this property is priced right. Reference area rates, builder reputation, amenities value, appreciation potential.\",\\n  \"seo_keywords\": [\"20 SEO keywords for this property listing\"],\\n  \"target_audience_personas\": [{\"persona\": \"Buyer type\", \"age\": \"Age range\", \"income\": \"Income bracket\", \"motivation\": \"Why they would buy this\", \"where_to_find\": \"Where to target them (platform/location)\"}],\\n  \"owner_report_summary\": \"Professional 3-4 sentence summary for the property owner explaining what marketing has been activated and expected timeline for first inquiries.\"\\n}\\n\\nIMPORTANT: All content must be specific to THIS property in THIS location. Use actual location names, nearby landmarks, and real area advantages. Write in Indian English. Prices in INR. Make WhatsApp messages forward-friendly. Return ONLY valid JSON. No markdown, no backticks.' }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 8192 } }) }}",
+        "options": {}
+      },
+      "id": "bf722d42-0993-48b6-a597-80fb36765bf1",
+      "name": "🤖 Gemini: Generate Marketing Kit",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -240,
+        3088
+      ],
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "j5pDDKdjpHXdbyhV",
+          "name": "Query Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const aiResp = $input.first().json;\nconst prop = $('🔧 Parse Property Details').first().json;\n\nlet kit = {};\ntry {\n  const raw = aiResp?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';\n  kit = JSON.parse(raw.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim());\n} catch (e) {\n  kit = {\n    portal_description_99acres: `${prop.config} ${prop.propertyType} for ${prop.transactionType} in ${prop.location}. ${prop.area}. ${prop.features}. ${prop.possession}. ${prop.furnishing}. Contact: ${prop.agentName} - ${prop.agentPhone}`,\n    portal_description_short: `${prop.config} ${prop.propertyType} in ${prop.location}. ${prop.area}. ${prop.price}. ${prop.possession}. Call ${prop.agentPhone}`,\n    portal_description_seo: `${prop.config} ${prop.propertyType} for ${prop.transactionType} in ${prop.location} at ${prop.price}. ${prop.features}. Contact ${prop.agentName}.`,\n    instagram_caption: `🏠 ${prop.propertyTitle}\\n📍 ${prop.location}\\n💰 ${prop.price}\\n📐 ${prop.area}\\n\\nDM for details!`,\n    instagram_story_text: `🔥 ${prop.config} in ${prop.location} | ${prop.price} | DM Now!`,\n    facebook_post: `${prop.propertyTitle}\\n\\n${prop.config} | ${prop.area} | ${prop.location}\\nPrice: ${prop.price}\\n${prop.features}\\n\\nContact: ${prop.agentName} - ${prop.agentPhone}`,\n    whatsapp_broadcast: `🏠 *${prop.propertyTitle}*\\n📍 ${prop.location}\\n💰 ${prop.price}\\n📐 ${prop.area}\\n🏗 ${prop.possession}\\n\\n✅ ${prop.features}\\n\\n📞 ${prop.agentName} - ${prop.agentPhone}`,\n    whatsapp_short: `${prop.config} | ${prop.location} | ${prop.price} | ${prop.agentPhone}`,\n    broker_pitch: `Dear Partner, sharing an exclusive listing: ${prop.propertyTitle} at ${prop.price}. Contact for co-broking.`,\n    neighbourhood_guide: `${prop.location} is a well-connected locality with excellent infrastructure.`,\n    open_house_invite: prop.openHouseDate ? `You are invited to visit ${prop.propertyTitle} on ${prop.openHouseDate}.` : 'Open house date not scheduled.',\n    buyer_followup_email_1: `Hi, thank you for your interest in ${prop.propertyTitle}. Would you like to schedule a visit?`,\n    buyer_followup_email_2: `Hi, just checking in about ${prop.propertyTitle}. We have had other inquiries. Would you like to discuss further?`,\n    buyer_followup_email_3: `Hi, wanted to follow up one last time about ${prop.propertyTitle}. No pressure at all.`,\n    comparison_points: ['Prime location', 'Competitive pricing', 'Modern amenities', 'Good connectivity', 'Reputed builder'],\n    objection_handling: [{objection: 'Price is too high', response: 'The price reflects premium amenities and location advantages.'}],\n    price_justification: `This property is competitively priced for ${prop.location}.`,\n    seo_keywords: [`${prop.config} in ${prop.location}`, `${prop.propertyType} for ${prop.transactionType} ${prop.location}`],\n    target_audience_personas: [{persona: 'Working Professional', age: '28-40', income: '15-30 LPA', motivation: 'Upgrade to bigger space', where_to_find: 'LinkedIn, Instagram'}],\n    owner_report_summary: `Your property at ${prop.location} has been listed and marketing has been activated across multiple channels.`\n  };\n}\n\nreturn [{ json: { ...prop, kit } }];"
+      },
+      "id": "c4a8be2e-c84a-4f45-bfd7-8279dee5d738",
+      "name": "🔀 Parse Marketing Kit",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -16,
+        3088
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1IKoodXDahKIF86h__xiBOVvU9dxhXChe57cPl3-hGLg",
+          "mode": "list",
+          "cachedResultName": "Real_Estate_Listings_Tab",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1IKoodXDahKIF86h__xiBOVvU9dxhXChe57cPl3-hGLg/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 257165976,
+          "mode": "list",
+          "cachedResultName": "Real_Estate_Listings_Tab.csv",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1IKoodXDahKIF86h__xiBOVvU9dxhXChe57cPl3-hGLg/edit#gid=257165976"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Property Title": "={{ $json.propertyTitle }}",
+            "Type": "={{ $json.propertyType }}",
+            "Transaction": "={{ $json.transactionType }}",
+            "Price": "={{ $json.price }}",
+            "Location": "={{ $json.location }}",
+            "Area": "={{ $json.area }}",
+            "Config": "={{ $json.config }}",
+            "Builder": "={{ $json.builder }}",
+            "Possession": "={{ $json.possession }}",
+            "Furnishing": "={{ $json.furnishing }}",
+            "Agent": "={{ $json.agentName }}",
+            "Agency": "={{ $json.agencyName }}",
+            "Portal Desc (99acres)": "={{ $json.kit.portal_description_99acres }}",
+            "Portal Desc (Short)": "={{ $json.kit.portal_description_short }}",
+            "Portal Desc (SEO)": "={{ $json.kit.portal_description_seo }}",
+            "Instagram Caption": "={{ $json.kit.instagram_caption }}",
+            "Instagram Story": "={{ $json.kit.instagram_story_text }}",
+            "Facebook Post": "={{ $json.kit.facebook_post }}",
+            "WhatsApp Broadcast": "={{ $json.kit.whatsapp_broadcast }}",
+            "WhatsApp Short": "={{ $json.kit.whatsapp_short }}",
+            "Broker Pitch": "={{ $json.kit.broker_pitch }}",
+            "Neighbourhood Guide": "={{ $json.kit.neighbourhood_guide }}",
+            "Open House Invite": "={{ $json.kit.open_house_invite }}",
+            "Follow-Up 1": "={{ $json.kit.buyer_followup_email_1 }}",
+            "Follow-Up 2": "={{ $json.kit.buyer_followup_email_2 }}",
+            "Follow-Up 3": "={{ $json.kit.buyer_followup_email_3 }}",
+            "Price Justification": "={{ $json.kit.price_justification }}",
+            "SEO Keywords": "={{ (Array.isArray($json.kit.seo_keywords) ? $json.kit.seo_keywords : []).join(', ') }}",
+            "Status": "Not Started",
+            "Generated At": "={{ $json.timestamp }}",
+            "Listing": "Active",
+            "Owner Email": "admin@reoclaw.com"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Property Title",
+              "displayName": "Property Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Type",
+              "displayName": "Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Transaction",
+              "displayName": "Transaction",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Price",
+              "displayName": "Price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Location",
+              "displayName": "Location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Area",
+              "displayName": "Area",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Config",
+              "displayName": "Config",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Builder",
+              "displayName": "Builder",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Possession",
+              "displayName": "Possession",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Furnishing",
+              "displayName": "Furnishing",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Agent",
+              "displayName": "Agent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Agency",
+              "displayName": "Agency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Portal Desc (99acres)",
+              "displayName": "Portal Desc (99acres)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Portal Desc (Short)",
+              "displayName": "Portal Desc (Short)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Portal Desc (SEO)",
+              "displayName": "Portal Desc (SEO)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Instagram Caption",
+              "displayName": "Instagram Caption",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Instagram Story",
+              "displayName": "Instagram Story",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Facebook Post",
+              "displayName": "Facebook Post",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "WhatsApp Broadcast",
+              "displayName": "WhatsApp Broadcast",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "WhatsApp Short",
+              "displayName": "WhatsApp Short",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Broker Pitch",
+              "displayName": "Broker Pitch",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Neighbourhood Guide",
+              "displayName": "Neighbourhood Guide",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Open House Invite",
+              "displayName": "Open House Invite",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Owner Email",
+              "displayName": "Owner Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Follow-Up 1",
+              "displayName": "Follow-Up 1",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Follow-Up 2",
+              "displayName": "Follow-Up 2",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Follow-Up 3",
+              "displayName": "Follow-Up 3",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Price Justification",
+              "displayName": "Price Justification",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "SEO Keywords",
+              "displayName": "SEO Keywords",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Generated At",
+              "displayName": "Generated At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Listing",
+              "displayName": "Listing",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "c2325992-a597-497a-a9a0-73693386d5f7",
+      "name": "📊 Log to Listings Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        208,
+        2928
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DXFuvXECI1McFlIe",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst k = d.kit;\n\nconst colors = { bg:'#0d1117', card:'#161b22', border:'#1e293b', orange:'#f97316', blue:'#2563eb', teal:'#0d9488', green:'#22c55e', purple:'#8b5cf6', yellow:'#f59e0b', pink:'#ec4899', cyan:'#06b6d4', red:'#ef4444', white:'#ffffff', light:'#e2e8f0', gray:'#94a3b8' };\n\nconst section = (icon, title, content, clr) =>\n  '<div style=\"margin-bottom:16px;\"><div style=\"background:' + colors.card + ';border-radius:8px;overflow:hidden;border:1px solid ' + colors.border + ';\">' +\n  '<div style=\"background:linear-gradient(135deg,' + clr + ' 0%,' + clr + '99 100%);padding:12px 16px;\">' +\n  '<h2 style=\"margin:0;color:#fff;font-size:14px;font-weight:700;\">' + icon + '  ' + title + '</h2></div>' +\n  '<div style=\"padding:14px;\">' + content + '</div></div></div>';\n\nconst textBlock = (text) => '<p style=\"color:' + colors.light + ';font-size:13px;line-height:1.7;margin:0;white-space:pre-wrap;\">' + (text || '').replace(/\\n/g, '<br>') + '</p>';\n\nconst copyBlock = (label, text) => '<div style=\"background:' + colors.bg + ';border-radius:6px;padding:12px;margin:6px 0;border:1px solid ' + colors.border + ';\">' +\n  '<p style=\"color:' + colors.gray + ';font-size:10px;margin:0 0 6px;text-transform:uppercase;letter-spacing:1px;\">' + label + '</p>' +\n  '<p style=\"color:' + colors.light + ';font-size:13px;line-height:1.6;margin:0;white-space:pre-wrap;\">' + (text || '').replace(/\\n/g, '<br>') + '</p></div>';\n\nconst compPoints = (k.comparison_points || []).map(p => '<tr><td style=\"padding:6px 12px;color:' + colors.light + ';font-size:13px;border-bottom:1px solid ' + colors.border + ';\">✓ ' + p + '</td></tr>').join('');\n\nconst objections = (k.objection_handling || []).map(o => '<div style=\"background:' + colors.bg + ';border-radius:6px;padding:10px;margin:6px 0;border:1px solid ' + colors.border + ';\">' +\n  '<p style=\"color:' + colors.red + ';font-size:12px;font-weight:600;margin:0 0 4px;\">❌ ' + o.objection + '</p>' +\n  '<p style=\"color:' + colors.green + ';font-size:12px;margin:0;\">✅ ' + o.response + '</p></div>').join('');\n\nconst personas = (k.target_audience_personas || []).map(p => '<div style=\"background:' + colors.bg + ';border-radius:6px;padding:10px;margin:6px 0;border:1px solid ' + colors.border + ';\">' +\n  '<p style=\"color:' + colors.orange + ';font-size:13px;font-weight:600;margin:0 0 4px;\">' + p.persona + '</p>' +\n  '<p style=\"color:' + colors.gray + ';font-size:11px;margin:0;\">Age: ' + p.age + ' | Income: ' + p.income + '</p>' +\n  '<p style=\"color:' + colors.light + ';font-size:12px;margin:4px 0 0;\">Motivation: ' + p.motivation + '</p>' +\n  '<p style=\"color:' + colors.teal + ';font-size:11px;margin:2px 0 0;\">📍 Find them: ' + p.where_to_find + '</p></div>').join('');\n\nconst email = '<div style=\"background:' + colors.bg + ';padding:0;font-family:Segoe UI,Arial,sans-serif;max-width:720px;margin:0 auto;\">' +\n\n'<div style=\"background:linear-gradient(135deg,#f97316 0%,#dc2626 100%);padding:32px 24px;text-align:center;border-radius:8px 8px 0 0;\">' +\n'<div style=\"font-size:36px;margin:0 0 8px;\">🏠</div>' +\n'<h1 style=\"margin:0;color:#fff;font-size:22px;font-weight:800;\">REAL ESTATE MARKETING KIT</h1>' +\n'<p style=\"margin:8px 0 0;color:#fed7aa;font-size:15px;\">' + d.propertyTitle + '</p>' +\n'<p style=\"margin:4px 0 0;color:#fbbf24;font-size:18px;font-weight:800;\">' + d.price + '</p></div>' +\n\n'<div style=\"background:' + colors.card + ';padding:24px;border:1px solid ' + colors.border + ';border-top:none;\">' +\n\n'<div style=\"background:' + colors.bg + ';border-radius:8px;padding:14px;margin:0 0 20px;border:1px solid ' + colors.border + ';\">' +\n'<table style=\"width:100%;border-collapse:collapse;\">' +\n'<tr><td style=\"padding:4px 0;color:' + colors.gray + ';width:110px;font-size:12px;\">📍 Location</td><td style=\"padding:4px 0;color:' + colors.white + ';font-size:13px;\">' + d.location + '</td></tr>' +\n'<tr><td style=\"padding:4px 0;color:' + colors.gray + ';font-size:12px;\">🏗 Type</td><td style=\"padding:4px 0;color:' + colors.white + ';font-size:13px;\">' + d.config + ' ' + d.propertyType + '</td></tr>' +\n'<tr><td style=\"padding:4px 0;color:' + colors.gray + ';font-size:12px;\">📐 Area</td><td style=\"padding:4px 0;color:' + colors.white + ';font-size:13px;\">' + d.area + '</td></tr>' +\n'<tr><td style=\"padding:4px 0;color:' + colors.gray + ';font-size:12px;\">🔑 Possession</td><td style=\"padding:4px 0;color:' + colors.white + ';font-size:13px;\">' + d.possession + '</td></tr>' +\n'<tr><td style=\"padding:4px 0;color:' + colors.gray + ';font-size:12px;\">🪑 Furnishing</td><td style=\"padding:4px 0;color:' + colors.white + ';font-size:13px;\">' + d.furnishing + '</td></tr>' +\n'<tr><td style=\"padding:4px 0;color:' + colors.gray + ';font-size:12px;\">🏢 Builder</td><td style=\"padding:4px 0;color:' + colors.white + ';font-size:13px;\">' + (d.builder || 'N/A') + '</td></tr>' +\n'</table></div>' +\n\nsection('🌐', 'PORTAL DESCRIPTIONS (Copy-Paste Ready)',\n  copyBlock('99ACRES / MAGICBRICKS (200 words)', k.portal_description_99acres) +\n  copyBlock('HOUSING.COM / NOBROKER (50 words)', k.portal_description_short) +\n  copyBlock('SEO-OPTIMIZED (150 words)', k.portal_description_seo),\n  colors.blue) +\n\nsection('📱', 'SOCIAL MEDIA CONTENT',\n  copyBlock('INSTAGRAM POST CAPTION', k.instagram_caption) +\n  copyBlock('INSTAGRAM STORY TEXT', k.instagram_story_text) +\n  copyBlock('FACEBOOK POST', k.facebook_post),\n  colors.pink) +\n\nsection('💬', 'WHATSAPP MESSAGES (Forward-Ready)',\n  copyBlock('WHATSAPP BROADCAST (Detailed)', k.whatsapp_broadcast) +\n  copyBlock('WHATSAPP SHORT (Quick Share)', k.whatsapp_short),\n  colors.green) +\n\nsection('🤝', 'BROKER / CHANNEL PARTNER PITCH', textBlock(k.broker_pitch), colors.purple) +\n\nsection('📍', 'NEIGHBOURHOOD GUIDE', textBlock(k.neighbourhood_guide), colors.teal) +\n\n(d.openHouseDate ? section('🏡', 'OPEN HOUSE INVITATION', textBlock(k.open_house_invite), colors.yellow) : '') +\n\nsection('📧', 'BUYER FOLLOW-UP EMAIL SEQUENCE',\n  copyBlock('EMAIL 1 — After Inquiry (Day 1)', k.buyer_followup_email_1) +\n  copyBlock('EMAIL 2 — Create Urgency (Day 5)', k.buyer_followup_email_2) +\n  copyBlock('EMAIL 3 — Gentle Close (Day 10)', k.buyer_followup_email_3),\n  colors.orange) +\n\nsection('💰', 'PRICE JUSTIFICATION (For Negotiations)', textBlock(k.price_justification), colors.green) +\n\nsection('⚡', 'COMPETITIVE ADVANTAGES', '<table style=\"width:100%;border-collapse:collapse;\">' + compPoints + '</table>', colors.cyan) +\n\nsection('🛡️', 'OBJECTION HANDLING', objections, colors.red) +\n\nsection('🎯', 'TARGET BUYER PERSONAS', personas, colors.orange) +\n\nsection('🔍', 'SEO KEYWORDS', '<p style=\"color:' + colors.light + ';font-size:12px;line-height:2;margin:0;\">' + (k.seo_keywords || []).map(kw => '<span style=\"display:inline-block;background:' + colors.bg + ';padding:3px 10px;border-radius:12px;margin:2px 4px;border:1px solid ' + colors.border + ';\">' + kw + '</span>').join('') + '</p>', colors.blue) +\n\n'<div style=\"margin:20px 0 0;padding:16px 0 0;border-top:1px solid ' + colors.border + ';\">' +\n'<table style=\"border-collapse:collapse;\"><tr>' +\n'<td style=\"padding-right:12px;vertical-align:top;\"><div style=\"width:44px;height:44px;background:' + colors.orange + ';border-radius:50%;text-align:center;line-height:44px;color:#fff;font-size:18px;font-weight:800;\">' + d.agentName.charAt(0).toUpperCase() + '</div></td>' +\n'<td style=\"vertical-align:top;\"><p style=\"margin:0;color:' + colors.orange + ';font-size:14px;font-weight:700;\">' + d.agentName + '</p>' +\n'<p style=\"margin:2px 0 0;color:' + colors.gray + ';font-size:12px;\">' + d.agencyName + '</p>' +\n'<p style=\"margin:2px 0 0;color:' + colors.light + ';font-size:12px;\">📞 ' + d.agentPhone + ' | ✉️ ' + d.agentEmail + '</p></td></tr></table></div>' +\n\n'</div>' +\n'<div style=\"background:' + colors.bg + ';padding:12px;text-align:center;border-radius:0 0 8px 8px;border:1px solid ' + colors.border + ';border-top:none;\">' +\n'<p style=\"color:#475569;font-size:11px;margin:0;\">Generated by AI Real Estate Marketing Kit • ' + d.dateGenerated + '</p></div></div>';\n\nreturn [{ json: { ...d, marketingEmail: email } }];"
+      },
+      "id": "9a551a87-889c-4089-9539-e17069d8f3dd",
+      "name": "📝 Build HTML Marketing Kit Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        3120
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.agentEmail }}",
+        "subject": "={{ '🏠 Marketing Kit Ready: ' + $json.propertyTitle + ' | ' + $json.price + ' | ' + $json.location }}",
+        "message": "={{ $json.marketingEmail }}",
+        "options": {}
+      },
+      "id": "fb63e27c-11b0-4651-9861-1178dea98f28",
+      "name": "📧 Send Marketing Kit to Agent",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        432,
+        3120
+      ],
+      "webhookId": "20496e3e-fe27-4629-a923-727346a846eb",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "lr7mEtd9F7XIfoGz",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "🤖 Gemini: Create Image Prompts": {
+      "main": [
+        [
+          {
+            "node": "🔀 Parse Image Prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 Parse Image Prompts": {
+      "main": [
+        [
+          {
+            "node": "🎨 Gemini Image: Generate Instagram Visual",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🎨 Gemini Image: Generate Instagram Visual": {
+      "main": [
+        [
+          {
+            "node": "🎨 Gemini Image: Generate LinkedIn Visual",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🎨 Gemini Image: Generate LinkedIn Visual": {
+      "main": [
+        [
+          {
+            "node": "📦 Package Images + Captions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📦 Package Images + Captions": {
+      "main": [
+        [
+          {
+            "node": "📧 Send Visuals to Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Build Owner Report Email1": {
+      "main": [
+        [
+          {
+            "node": "📧 Send Report to Owner1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Property Listing Form": {
+      "main": [
+        [
+          {
+            "node": "🔧 Parse Property Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Parse Property Details": {
+      "main": [
+        [
+          {
+            "node": "🤖 Gemini: Generate Marketing Kit",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "🤖 Gemini: Create Image Prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 Gemini: Generate Marketing Kit": {
+      "main": [
+        [
+          {
+            "node": "🔀 Parse Marketing Kit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 Parse Marketing Kit": {
+      "main": [
+        [
+          {
+            "node": "📊 Log to Listings Sheet",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📝 Build HTML Marketing Kit Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Build HTML Marketing Kit Email": {
+      "main": [
+        [
+          {
+            "node": "📧 Send Marketing Kit to Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📧 Send Marketing Kit to Agent": {
+      "main": [
+        [
+          {
+            "node": "📝 Build Owner Report Email1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "3ee74500-6ae4-446d-b919-e416f6879fa0",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "db4e3ebe7200858fee452751665ae7824a24006e6fdbd82d41838583538806e2"
+  },
+  "id": "FME1MG1RgUSZtFE9",
+  "tags": []
+}

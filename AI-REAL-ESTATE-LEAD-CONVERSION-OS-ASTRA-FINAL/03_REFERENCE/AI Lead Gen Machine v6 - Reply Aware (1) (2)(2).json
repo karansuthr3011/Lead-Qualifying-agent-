@@ -1,0 +1,2127 @@
+{
+  "name": "AI Lead Gen Machine v6 - Reply Aware",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "🚀 Launch Lead Gen Campaign",
+        "formDescription": "Enter your agency details. The system will read contacts from your Apollo Contacts sheet, generate AI-personalized emails for each one, send Email 1, and auto-follow-up on schedule.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Your Agency Name",
+              "fieldType": "string",
+              "placeholder": "e.g. LanceMart AI",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Service You Are Selling",
+              "fieldType": "string",
+              "placeholder": "e.g. AI Chatbot Setup for Websites",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Your Unique Value Proposition",
+              "fieldType": "textarea",
+              "placeholder": "e.g. We build AI chatbots that increase website conversion by 40% in 30 days",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Your Sender Email",
+              "fieldType": "string",
+              "placeholder": "you@youragency.com",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Your Full Name",
+              "fieldType": "string",
+              "placeholder": "Your name for email signature",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "dfa190f3-b293-4b4c-a40d-eb5fe7de3756",
+      "name": "📋 Launch Campaign Form1",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        -4096,
+        -160
+      ],
+      "webhookId": "f61df3e6-5b28-416c-9ace-40c11114367b"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1jqFCjMnhq7TyEJMgcg95t-J--gXiAk71KE4YUsjGzE0",
+          "mode": "list",
+          "cachedResultName": "apollo-contacts-export",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1jqFCjMnhq7TyEJMgcg95t-J--gXiAk71KE4YUsjGzE0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 764065795,
+          "mode": "list",
+          "cachedResultName": "apollo-contacts-export.csv",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1jqFCjMnhq7TyEJMgcg95t-J--gXiAk71KE4YUsjGzE0/edit#gid=764065795"
+        },
+        "options": {}
+      },
+      "id": "d1ebe287-dafd-4f3a-ab41-9790301fba50",
+      "name": "📥 Read Apollo Contacts Sheet1",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -3872,
+        -160
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "LYCR7EUGbjV6ZUXI",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ─────────────────────────────────────────────────────────────\n// Merge form data (agency info) with each Apollo contact row.\n// Maps exact Apollo CSV column names to clean field names.\n// Returns MULTIPLE items — one per contact — for parallel\n// processing through downstream nodes.\n//\n// Apollo CSV columns used:\n//   First Name, Last Name, Title, Company Name, Email,\n//   Email Status, # Employees, Industry, Keywords,\n//   Person Linkedin Url, Website, City, State, Country,\n//   Annual Revenue, Technologies, Seniority\n// ─────────────────────────────────────────────────────────────\nconst contacts = $input.all();\nconst form = $('📋 Launch Campaign Form1').first().json;\n\nconst agencyName = form['Your Agency Name'] || '';\nconst service = form['Service You Are Selling'] || '';\nconst uvp = form['Your Unique Value Proposition'] || '';\nconst senderEmail = form['Your Sender Email'] || '';\nconst senderName = form['Your Full Name'] || '';\n\nconst leads = contacts\n  .map((item, idx) => {\n    const r = item.json;\n    const email = (r['Email'] || '').trim();\n    const emailStatus = (r['Email Status'] || '').trim();\n    \n    // Skip rows without verified email\n    if (!email || emailStatus.toLowerCase() !== 'verified') return null;\n    \n    const firstName = (r['First Name'] || '').trim();\n    const lastName = (r['Last Name'] || '').trim();\n    const companyName = (r['Company Name'] || '').trim();\n    const title = (r['Title'] || '').trim();\n    const industry = (r['Industry'] || '').trim();\n    const companySize = (r['# Employees'] || '').toString().trim();\n    const keywords = (r['Keywords'] || '').trim();\n    const website = (r['Website'] || '').trim();\n    const linkedin = (r['Person Linkedin Url'] || '').trim();\n    const city = (r['City'] || '').trim();\n    const state = (r['State'] || '').trim();\n    const country = (r['Country'] || '').trim();\n    const revenue = (r['Annual Revenue'] || '').toString().trim();\n    const tech = (r['Technologies'] || '').trim();\n    const seniority = (r['Seniority'] || '').trim();\n    \n    // Build rich company context for AI personalization\n    const companyContext = [\n      industry ? `Industry: ${industry}` : '',\n      companySize ? `${companySize} employees` : '',\n      revenue ? `Revenue: ${revenue}` : '',\n      keywords ? `Focus areas: ${keywords.slice(0, 150)}` : '',\n      tech ? `Tech stack: ${tech.slice(0, 150)}` : '',\n      website ? `Website: ${website}` : ''\n    ].filter(Boolean).join('. ');\n    \n    return {\n      leadIndex: idx + 1,\n      firstName,\n      lastName,\n      fullName: `${firstName} ${lastName}`.trim(),\n      email,\n      title,\n      seniority,\n      companyName,\n      companyIndustry: industry,\n      companySize,\n      companyKeywords: keywords,\n      companyWebsite: website,\n      companyRevenue: revenue,\n      companyTech: tech,\n      companyContext,\n      linkedinUrl: linkedin,\n      location: [city, state, country].filter(Boolean).join(', '),\n      agencyName,\n      service,\n      uvp,\n      senderEmail,\n      senderName\n    };\n  })\n  .filter(Boolean);\n\nif (leads.length === 0) {\n  throw new Error('No contacts with verified emails found in the Apollo Contacts sheet. Check that Email Status column says \"Verified\".');\n}\n\nreturn leads.map(l => ({ json: l }));"
+      },
+      "id": "78484be8-6fbb-471b-bff9-6593e80a46bd",
+      "name": "🔀 Merge Form + Apollo Contacts1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3648,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ─────────────────────────────────────────────────────────────\n// Build AI personalization prompt using the RICH Apollo data.\n// Uses: company context, keywords, tech stack, revenue,\n// seniority — far more personalized than basic name+company.\n// ─────────────────────────────────────────────────────────────\nconst lead = $input.first().json;\n\nconst systemPrompt = `You are an expert cold email copywriter for ${lead.agencyName}. You write brutally short, hyper-personalized cold emails that get replies.\n\nRULES:\n- Reference something SPECIFIC about their company: their industry, tech stack, website, or business focus\n- Under 100 words per email body\n- No corporate jargon: never use \"leverage\", \"synergy\", \"game-changer\", \"revolutionary\", \"cutting-edge\"\n- Sound like a helpful human, not a salesperson\n- One soft call-to-action per email\n- RESPOND ONLY with valid JSON. No markdown fences, no backticks, no extra text.`;\n\nconst userPrompt = `Write a 3-email cold outreach sequence for this prospect:\n\nPROSPECT:\n- Name: ${lead.fullName}\n- Title: ${lead.title} (${lead.seniority})\n- Company: ${lead.companyName}\n- ${lead.companyContext}\n- Location: ${lead.location}\n\nSENDER:\n- Name: ${lead.senderName} from ${lead.agencyName}\n- Service: ${lead.service}\n- Value proposition: ${lead.uvp}\n\nReturn EXACTLY this JSON:\n{\n  \"email1_subject\": \"Curiosity-driving subject under 8 words\",\n  \"email1_body\": \"Value-first intro. Reference their specific company/industry/tech. Under 100 words. End with soft CTA like 'Would a 15-min chat make sense this week?'\",\n  \"email2_subject\": \"Follow-up subject under 8 words\",\n  \"email2_body\": \"Social proof email. Mention a specific measurable result you achieved. Under 80 words.\",\n  \"email3_subject\": \"Breakup subject under 8 words\",\n  \"email3_body\": \"Friendly no-pressure farewell. Under 60 words. Often gets highest reply rate.\"\n}`;\n\nreturn [{ json: { ...lead, systemPrompt, userPrompt } }];"
+      },
+      "id": "521c9104-f889-412a-aec3-678cc077d148",
+      "name": "✍️ Build AI Prompt (Rich Context)1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3424,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "model": "gpt-4o-mini",
+        "prompt": {
+          "messages": [
+            {
+              "role": "system",
+              "content": "={{ $json.systemPrompt }}"
+            },
+            {
+              "content": "={{ $json.userPrompt }}"
+            }
+          ]
+        },
+        "options": {
+          "maxTokens": 1200,
+          "temperature": 0.75
+        },
+        "requestOptions": {}
+      },
+      "id": "7b6ab51d-9ef7-468b-9453-f9240deb5cf5",
+      "name": "🤖 GPT-4o-mini Personalizer1",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [
+        -3200,
+        -160
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "WMTGIjMSnfdX0ryV",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ─────────────────────────────────────────────────────────────\n// Parse AI-generated emails and merge with lead data.\n// Includes fallback if AI returns malformed JSON.\n// ─────────────────────────────────────────────────────────────\nconst aiResp = $input.first().json;\nconst lead = $input.first().json;\nconst { systemPrompt, userPrompt, ...cleanLead } = lead;\n\nlet emails = {};\ntry {\n  const raw = aiResp?.message?.content || aiResp?.choices?.[0]?.message?.content || '{}';\n  const cleaned = raw.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  emails = JSON.parse(cleaned);\n} catch (e) {\n  emails = {\n    email1_subject: `Quick question about ${cleanLead.companyName}`,\n    email1_body: `Hi ${cleanLead.firstName},\\n\\nI came across ${cleanLead.companyName} and noticed you're in the ${cleanLead.companyIndustry} space. I help companies like yours implement ${cleanLead.service}.\\n\\nWould a 15-minute chat make sense?\\n\\nBest,\\n${cleanLead.senderName}`,\n    email2_subject: `Following up \\u2014 ${cleanLead.companyName}`,\n    email2_body: `Hi ${cleanLead.firstName},\\n\\nJust circling back. We recently helped a similar ${cleanLead.companyIndustry} company achieve 40% better results with our AI solution.\\n\\nWorth a quick call?\\n\\n${cleanLead.senderName}`,\n    email3_subject: `Closing the loop`,\n    email3_body: `Hi ${cleanLead.firstName},\\n\\nI've reached out about AI automation for ${cleanLead.companyName}. If timing isn't right, totally understand.\\n\\nWishing ${cleanLead.companyName} all the best.\\n\\n${cleanLead.senderName}`\n  };\n}\n\nconst now = new Date();\n\nreturn [{ json: {\n  ...cleanLead,\n  ...emails,\n  dateGenerated: now.toLocaleDateString('en-IN', { year:'numeric', month:'short', day:'numeric' }),\n  email1SentAt: now.toISOString(),\n  status: 'Email 1 Sent'\n}}];"
+      },
+      "id": "d5473cb2-f333-43d9-8d27-20eac3bd0d11",
+      "name": "🔀 Parse AI Emails & Merge1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2976,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1drNpyWONSIyD0OIsIrhEoasPpC52T4LUMJVCpdi6gJI",
+          "mode": "list",
+          "cachedResultName": "Campaign_CRM_Tab_Template",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1drNpyWONSIyD0OIsIrhEoasPpC52T4LUMJVCpdi6gJI/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2072672175,
+          "mode": "list",
+          "cachedResultName": "Campaign_CRM_Tab_Template.csv",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1drNpyWONSIyD0OIsIrhEoasPpC52T4LUMJVCpdi6gJI/edit#gid=2072672175"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Lead #": "=",
+            "First Name": "={{ $('✍️ Build AI Prompt (Rich Context)1').item.json.firstName }}",
+            "Last Name": "={{ $('✍️ Build AI Prompt (Rich Context)1').item.json.lastName }}",
+            "Email": "={{ $('✍️ Build AI Prompt (Rich Context)1').item.json.email }}",
+            "Job Title": "={{ $('✍️ Build AI Prompt (Rich Context)1').item.json.title }}",
+            "Seniority": "={{ $('✍️ Build AI Prompt (Rich Context)1').item.json.seniority }}",
+            "Company": "={{ $('✍️ Build AI Prompt (Rich Context)1').item.json.companyName }}",
+            "Industry": "={{ $('✍️ Build AI Prompt (Rich Context)1').item.json.companyIndustry }}",
+            "Company Size": "={{ $('✍️ Build AI Prompt (Rich Context)1').item.json.companySize }}",
+            "Location": "={{ $('✍️ Build AI Prompt (Rich Context)1').item.json.location }}",
+            "LinkedIn": "={{ $('✍️ Build AI Prompt (Rich Context)1').item.json.linkedinUrl }}",
+            "Website": "={{ $('✍️ Build AI Prompt (Rich Context)1').item.json.companyWebsite }}",
+            "Email 1 Subject": "={{ $('🔀 Parse AI Emails & Merge1').item.json.email1_subject }}",
+            "Email 1 Body": "={{ $('🔀 Parse AI Emails & Merge1').item.json.email1_body }}",
+            "Email 2 Subject": "={{ $('🔀 Parse AI Emails & Merge1').item.json.email2_subject }}",
+            "Email 2 Body": "={{ $('🔀 Parse AI Emails & Merge1').item.json.email2_body }}",
+            "Email 3 Subject": "={{ $('🔀 Parse AI Emails & Merge1').item.json.email3_subject }}",
+            "Status": "={{ $('🔀 Parse AI Emails & Merge1').item.json.status }}",
+            "Email 1 Sent At": "={{ $('🔀 Parse AI Emails & Merge1').item.json.email1SentAt }}",
+            "Sender Name": "={{ $('📋 Launch Campaign Form1').item.json['Your Sender Email'] }}",
+            "Agency Name": "={{ $('📋 Launch Campaign Form1').item.json['Your Agency Name'] }}",
+            "Date Generated": "={{ $('🔀 Parse AI Emails & Merge1').item.json.dateGenerated }}",
+            "Thread ID": "={{ $json.threadId }}",
+            "Email 3 Body": "={{ $('🔀 Parse AI Emails & Merge1').item.json.email3_body }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Lead #",
+              "displayName": "Lead #",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "First Name",
+              "displayName": "First Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Name",
+              "displayName": "Last Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Job Title",
+              "displayName": "Job Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Seniority",
+              "displayName": "Seniority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Industry",
+              "displayName": "Industry",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company Size",
+              "displayName": "Company Size",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Location",
+              "displayName": "Location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LinkedIn",
+              "displayName": "LinkedIn",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Website",
+              "displayName": "Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 1 Subject",
+              "displayName": "Email 1 Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 1 Body",
+              "displayName": "Email 1 Body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 2 Subject",
+              "displayName": "Email 2 Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 2 Body",
+              "displayName": "Email 2 Body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 3 Subject",
+              "displayName": "Email 3 Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 3 Body",
+              "displayName": "Email 3 Body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 1 Sent At",
+              "displayName": "Email 1 Sent At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 2 Sent At",
+              "displayName": "Email 2 Sent At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Thread ID",
+              "displayName": "Thread ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Sender Name",
+              "displayName": "Sender Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Agency Name",
+              "displayName": "Agency Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date Generated",
+              "displayName": "Date Generated",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "3e056e06-447f-4d51-b456-fcf9008ee8c3",
+      "name": "📝 Log to Campaign CRM1",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -2368,
+        -160
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "LYCR7EUGbjV6ZUXI",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "=teamlancemart@gmail.com",
+        "subject": "={{ $json.email1_subject }}",
+        "message": "={{ $json.email1_body + '\\n\\n\\u2014\\n' + $json.senderName + '\\n' + $json.agencyName + '\\n\\nP.S. Reply \\'remove\\' to unsubscribe.' }}",
+        "options": {
+          "appendAttribution": false,
+          "replyTo": "={{ $('📋 Launch Campaign Form1').item.json['Your Sender Email'] }}"
+        }
+      },
+      "id": "5867ca9e-3cd9-419e-95d2-79b319a900f0",
+      "name": "📧 Send Email 1 (Intro)1",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -2768,
+        -160
+      ],
+      "webhookId": "e4edbeb0-c5c5-4d01-bf61-e968805e0c56",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "SejBgwfoBRSc02e8",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Capture Gmail threadId returned by the Send Email node\n// and merge it with the lead data for CRM logging.\nconst gmailResult = $input.first().json;\nconst threadId = gmailResult.threadId || gmailResult.id || '';\nreturn [{ json: { ...gmailResult, capturedThreadId: threadId } }];"
+      },
+      "id": "98844267-8f0a-49ac-9803-4b2e87d9b96c",
+      "name": "📌 Capture Thread ID1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2576,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Reply Gate for Email 2\n// output[0] = no reply → send Email 2\n// output[1] = reply detected → mark replied, stop\n\nconst noReply = [];\nconst replied = [];\n\nfor (const item of $input.all()) {\n  const messages = item.json?.messages ?? [];\n  if (messages.length >= 2) {\n    replied.push({ json: item.json });\n  } else {\n    noReply.push({ json: item.json });\n  }\n}\n\nreturn [noReply, replied];"
+      },
+      "id": "be040150-d59b-4991-8f8f-0cb7d62ce7c8",
+      "name": "🔍 Check Reply (Email 2 Gate)1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3216,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1drNpyWONSIyD0OIsIrhEoasPpC52T4LUMJVCpdi6gJI",
+          "mode": "list",
+          "cachedResultName": "Campaign_CRM_Tab_Template",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1drNpyWONSIyD0OIsIrhEoasPpC52T4LUMJVCpdi6gJI/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2072672175,
+          "mode": "list",
+          "cachedResultName": "Campaign_CRM_Tab_Template.csv",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1drNpyWONSIyD0OIsIrhEoasPpC52T4LUMJVCpdi6gJI/edit#gid=2072672175"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Status": "Replied to Email 1",
+            "Email": "={{ $json.Email }}",
+            "row_number": 0
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "Lead #",
+              "displayName": "Lead #",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "First Name",
+              "displayName": "First Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Name",
+              "displayName": "Last Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Job Title",
+              "displayName": "Job Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Seniority",
+              "displayName": "Seniority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Industry",
+              "displayName": "Industry",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company Size",
+              "displayName": "Company Size",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Location",
+              "displayName": "Location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LinkedIn",
+              "displayName": "LinkedIn",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Website",
+              "displayName": "Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 1 Subject",
+              "displayName": "Email 1 Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 1 Body",
+              "displayName": "Email 1 Body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 2 Subject",
+              "displayName": "Email 2 Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 2 Body",
+              "displayName": "Email 2 Body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 3 Subject",
+              "displayName": "Email 3 Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 3 Body",
+              "displayName": "Email 3 Body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 1 Sent At",
+              "displayName": "Email 1 Sent At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 2 Sent At",
+              "displayName": "Email 2 Sent At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Thread ID",
+              "displayName": "Thread ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Sender Name",
+              "displayName": "Sender Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Agency Name",
+              "displayName": "Agency Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date Generated",
+              "displayName": "Date Generated",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "28352ac1-f459-4faf-b6ad-67bf321f827e",
+      "name": "📝 Mark Replied → Stop Sequence (E2)1",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -2992,
+        336
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "LYCR7EUGbjV6ZUXI",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Reply Gate for Email 3\n// output[0] = no reply → send Email 3\n// output[1] = reply detected → mark replied, stop\n\nconst noReply = [];\nconst replied = [];\n\nfor (const item of $input.all()) {\n  const messages = item.json?.messages ?? [];\n  if (messages.length >= 2) {\n    replied.push({ json: item.json });\n  } else {\n    noReply.push({ json: item.json });\n  }\n}\n\nreturn [noReply, replied];"
+      },
+      "id": "c6c477fd-c0d2-4087-bd72-16169695a410",
+      "name": "🔍 Check Reply (Email 3 Gate)1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3200,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1drNpyWONSIyD0OIsIrhEoasPpC52T4LUMJVCpdi6gJI",
+          "mode": "list",
+          "cachedResultName": "Campaign_CRM_Tab_Template",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1drNpyWONSIyD0OIsIrhEoasPpC52T4LUMJVCpdi6gJI/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2072672175,
+          "mode": "list",
+          "cachedResultName": "Campaign_CRM_Tab_Template.csv",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1drNpyWONSIyD0OIsIrhEoasPpC52T4LUMJVCpdi6gJI/edit#gid=2072672175"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Status": "Replied to Email 2",
+            "Email": "={{ $json.Email }}",
+            "row_number": 0
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "Lead #",
+              "displayName": "Lead #",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "First Name",
+              "displayName": "First Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Name",
+              "displayName": "Last Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Job Title",
+              "displayName": "Job Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Seniority",
+              "displayName": "Seniority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Industry",
+              "displayName": "Industry",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company Size",
+              "displayName": "Company Size",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Location",
+              "displayName": "Location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LinkedIn",
+              "displayName": "LinkedIn",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Website",
+              "displayName": "Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 1 Subject",
+              "displayName": "Email 1 Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 1 Body",
+              "displayName": "Email 1 Body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 2 Subject",
+              "displayName": "Email 2 Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 2 Body",
+              "displayName": "Email 2 Body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 3 Subject",
+              "displayName": "Email 3 Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 3 Body",
+              "displayName": "Email 3 Body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 1 Sent At",
+              "displayName": "Email 1 Sent At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 2 Sent At",
+              "displayName": "Email 2 Sent At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Thread ID",
+              "displayName": "Thread ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Sender Name",
+              "displayName": "Sender Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Agency Name",
+              "displayName": "Agency Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date Generated",
+              "displayName": "Date Generated",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "cdf3d262-8910-4914-a575-37d55259c022",
+      "name": "📝 Mark Replied → Stop Sequence (E3)1",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -2976,
+        768
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "LYCR7EUGbjV6ZUXI",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 10
+            }
+          ]
+        }
+      },
+      "id": "32356a2e-4fab-4642-82e3-7d6901549d91",
+      "name": "⏰ Daily 10 AM: Email 2 Due?",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -4112,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1drNpyWONSIyD0OIsIrhEoasPpC52T4LUMJVCpdi6gJI",
+          "mode": "list",
+          "cachedResultName": "Campaign_CRM_Tab_Template",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1drNpyWONSIyD0OIsIrhEoasPpC52T4LUMJVCpdi6gJI/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2072672175,
+          "mode": "list",
+          "cachedResultName": "Campaign_CRM_Tab_Template.csv",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1drNpyWONSIyD0OIsIrhEoasPpC52T4LUMJVCpdi6gJI/edit#gid=2072672175"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Status",
+              "lookupValue": "Email 1 Sent"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "438b4102-7422-4976-9230-66f280e8ed36",
+      "name": "📥 Fetch 'Email 1 Sent' Leads",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -3888,
+        240
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "LYCR7EUGbjV6ZUXI",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Only leads where 3+ days have passed since Email 1\nconst items = $input.all();\nconst now = Date.now();\nconst THREE_DAYS = 3 * 24 * 60 * 60 * 1000;\n\nconst due = items.filter(item => {\n  const sentAt = item.json['Email 1 Sent At'];\n  if (!sentAt) return false;\n  return (now - new Date(sentAt).getTime()) >= THREE_DAYS;\n});\n\nif (due.length === 0) return [];\nreturn due;"
+      },
+      "id": "27fd3804-731e-4a59-978e-7dff771a7cdf",
+      "name": "🔍 Filter: 3+ Days Passed",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3664,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "=teamlancemart@gmail.com",
+        "subject": "={{ $json['Email 2 Subject'] }}",
+        "message": "={{ $json['Email 2 Body'] + '\\n\\n\\u2014\\n' + $json['Sender Name'] + '\\n' + $json['Agency Name'] + '\\n\\nReply \\'remove\\' to unsubscribe.' }}",
+        "options": {}
+      },
+      "id": "c170e1cb-1dae-41ed-8e4d-d0c5cbc542a0",
+      "name": "📧 Send Email 2 (Follow-Up)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -2992,
+        144
+      ],
+      "webhookId": "8adb171d-4a42-4311-ac6e-cbc5c6410c71",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "SejBgwfoBRSc02e8",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1drNpyWONSIyD0OIsIrhEoasPpC52T4LUMJVCpdi6gJI",
+          "mode": "list",
+          "cachedResultName": "Campaign_CRM_Tab_Template",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1drNpyWONSIyD0OIsIrhEoasPpC52T4LUMJVCpdi6gJI/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2072672175,
+          "mode": "list",
+          "cachedResultName": "Campaign_CRM_Tab_Template.csv",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1drNpyWONSIyD0OIsIrhEoasPpC52T4LUMJVCpdi6gJI/edit#gid=2072672175"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Status": "Email 2 Sent",
+            "Email 2 Sent At": "={{ $now.toISO() }}"
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "Lead #",
+              "displayName": "Lead #",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "First Name",
+              "displayName": "First Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Name",
+              "displayName": "Last Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Job Title",
+              "displayName": "Job Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Seniority",
+              "displayName": "Seniority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Industry",
+              "displayName": "Industry",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company Size",
+              "displayName": "Company Size",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Location",
+              "displayName": "Location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LinkedIn",
+              "displayName": "LinkedIn",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Website",
+              "displayName": "Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 1 Subject",
+              "displayName": "Email 1 Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 1 Body",
+              "displayName": "Email 1 Body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 2 Subject",
+              "displayName": "Email 2 Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 2 Body",
+              "displayName": "Email 2 Body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 3 Subject",
+              "displayName": "Email 3 Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 3 Body",
+              "displayName": "Email 3 Body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 1 Sent At",
+              "displayName": "Email 1 Sent At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 2 Sent At",
+              "displayName": "Email 2 Sent At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Sender Name",
+              "displayName": "Sender Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Agency Name",
+              "displayName": "Agency Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date Generated",
+              "displayName": "Date Generated",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "271783c8-92b8-4fc9-99a4-8b033929fa92",
+      "name": "📝 Update CRM → Email 2 Sent",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -2768,
+        144
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "LYCR7EUGbjV6ZUXI",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 11
+            }
+          ]
+        }
+      },
+      "id": "be6dbefb-edbc-4a2e-aebb-e0ae40135f52",
+      "name": "⏰ Daily 11 AM: Email 3 Due?",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -4096,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1drNpyWONSIyD0OIsIrhEoasPpC52T4LUMJVCpdi6gJI",
+          "mode": "list",
+          "cachedResultName": "Campaign_CRM_Tab_Template",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1drNpyWONSIyD0OIsIrhEoasPpC52T4LUMJVCpdi6gJI/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2072672175,
+          "mode": "list",
+          "cachedResultName": "Campaign_CRM_Tab_Template.csv",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1drNpyWONSIyD0OIsIrhEoasPpC52T4LUMJVCpdi6gJI/edit#gid=2072672175"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Status",
+              "lookupValue": "Email 2 Sent"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4cfaa944-d6b8-43ee-8f23-5339b712450f",
+      "name": "📥 Fetch 'Email 2 Sent' Leads",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -3872,
+        672
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "LYCR7EUGbjV6ZUXI",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Only leads where 4+ days have passed since Email 2\nconst items = $input.all();\nconst now = Date.now();\nconst FOUR_DAYS = 4 * 24 * 60 * 60 * 1000;\n\nconst due = items.filter(item => {\n  const sentAt = item.json['Email 2 Sent At'];\n  if (!sentAt) return false;\n  return (now - new Date(sentAt).getTime()) >= FOUR_DAYS;\n});\n\nif (due.length === 0) return [];\nreturn due;"
+      },
+      "id": "833cb29e-7607-4cae-a8ba-fc36b7c8d2fe",
+      "name": "🔍 Filter: 4+ Days Passed",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3648,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "=teamlancemart@gmail.com",
+        "subject": "={{ $json['Email 3 Subject'] }}",
+        "message": "={{ $json['Email 3 Body'] + '\\n\\n\\u2014\\n' + $json['Sender Name'] + '\\n' + $json['Agency Name'] }}",
+        "options": {}
+      },
+      "id": "d48be9a9-28cf-441c-bd43-0a704e864b06",
+      "name": "📧 Send Email 3 (Breakup)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -2976,
+        576
+      ],
+      "webhookId": "17e9d812-8279-42ca-9258-1a11bc0c7d15",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "SejBgwfoBRSc02e8",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1drNpyWONSIyD0OIsIrhEoasPpC52T4LUMJVCpdi6gJI",
+          "mode": "list",
+          "cachedResultName": "Campaign_CRM_Tab_Template",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1drNpyWONSIyD0OIsIrhEoasPpC52T4LUMJVCpdi6gJI/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2072672175,
+          "mode": "list",
+          "cachedResultName": "Campaign_CRM_Tab_Template.csv",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1drNpyWONSIyD0OIsIrhEoasPpC52T4LUMJVCpdi6gJI/edit#gid=2072672175"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Status": "Sequence Done"
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "Lead #",
+              "displayName": "Lead #",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "First Name",
+              "displayName": "First Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Name",
+              "displayName": "Last Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Job Title",
+              "displayName": "Job Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Seniority",
+              "displayName": "Seniority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Industry",
+              "displayName": "Industry",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company Size",
+              "displayName": "Company Size",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Location",
+              "displayName": "Location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LinkedIn",
+              "displayName": "LinkedIn",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Website",
+              "displayName": "Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 1 Subject",
+              "displayName": "Email 1 Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 1 Body",
+              "displayName": "Email 1 Body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 2 Subject",
+              "displayName": "Email 2 Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 2 Body",
+              "displayName": "Email 2 Body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 3 Subject",
+              "displayName": "Email 3 Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 3 Body",
+              "displayName": "Email 3 Body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 1 Sent At",
+              "displayName": "Email 1 Sent At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email 2 Sent At",
+              "displayName": "Email 2 Sent At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Sender Name",
+              "displayName": "Sender Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Agency Name",
+              "displayName": "Agency Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date Generated",
+              "displayName": "Date Generated",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "7776a616-c84d-48ca-a1c3-5d4545e2b810",
+      "name": "📝 Update CRM → Sequence Done",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -2752,
+        576
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "LYCR7EUGbjV6ZUXI",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "thread",
+        "operation": "get",
+        "threadId": "={{ $json['Thread ID'] }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -3440,
+        240
+      ],
+      "id": "60e24c37-aa98-419b-89fb-7d3c54a7a407",
+      "name": "Get a thread2",
+      "webhookId": "5543f31f-7a08-473c-a1e7-fc06db917766",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "SejBgwfoBRSc02e8",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "thread",
+        "operation": "get",
+        "threadId": "={{ $('📥 Fetch \\'Email 2 Sent\\' Leads').item.json['Thread ID'] }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -3424,
+        672
+      ],
+      "id": "ddd663b9-3a20-4125-9863-f445fe9d529f",
+      "name": "Get a thread3",
+      "webhookId": "a935c4c8-99d2-4cdf-a6f2-eba9f1d43aa8",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "SejBgwfoBRSc02e8",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "📋 Launch Campaign Form1": {
+      "main": [
+        [
+          {
+            "node": "📥 Read Apollo Contacts Sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📥 Read Apollo Contacts Sheet1": {
+      "main": [
+        [
+          {
+            "node": "🔀 Merge Form + Apollo Contacts1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 Merge Form + Apollo Contacts1": {
+      "main": [
+        [
+          {
+            "node": "✍️ Build AI Prompt (Rich Context)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✍️ Build AI Prompt (Rich Context)1": {
+      "main": [
+        [
+          {
+            "node": "🤖 GPT-4o-mini Personalizer1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 GPT-4o-mini Personalizer1": {
+      "main": [
+        [
+          {
+            "node": "🔀 Parse AI Emails & Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 Parse AI Emails & Merge1": {
+      "main": [
+        [
+          {
+            "node": "📧 Send Email 1 (Intro)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📧 Send Email 1 (Intro)1": {
+      "main": [
+        [
+          {
+            "node": "📌 Capture Thread ID1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📌 Capture Thread ID1": {
+      "main": [
+        [
+          {
+            "node": "📝 Log to Campaign CRM1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Check Reply (Email 2 Gate)1": {
+      "main": [
+        [
+          {
+            "node": "📧 Send Email 2 (Follow-Up)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📝 Mark Replied → Stop Sequence (E2)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Check Reply (Email 3 Gate)1": {
+      "main": [
+        [
+          {
+            "node": "📧 Send Email 3 (Breakup)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📝 Mark Replied → Stop Sequence (E3)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⏰ Daily 10 AM: Email 2 Due?": {
+      "main": [
+        [
+          {
+            "node": "📥 Fetch 'Email 1 Sent' Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📥 Fetch 'Email 1 Sent' Leads": {
+      "main": [
+        [
+          {
+            "node": "🔍 Filter: 3+ Days Passed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Filter: 3+ Days Passed": {
+      "main": [
+        [
+          {
+            "node": "Get a thread2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📧 Send Email 2 (Follow-Up)": {
+      "main": [
+        [
+          {
+            "node": "📝 Update CRM → Email 2 Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⏰ Daily 11 AM: Email 3 Due?": {
+      "main": [
+        [
+          {
+            "node": "📥 Fetch 'Email 2 Sent' Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📥 Fetch 'Email 2 Sent' Leads": {
+      "main": [
+        [
+          {
+            "node": "🔍 Filter: 4+ Days Passed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Filter: 4+ Days Passed": {
+      "main": [
+        [
+          {
+            "node": "Get a thread3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📧 Send Email 3 (Breakup)": {
+      "main": [
+        [
+          {
+            "node": "📝 Update CRM → Sequence Done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a thread2": {
+      "main": [
+        [
+          {
+            "node": "🔍 Check Reply (Email 2 Gate)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a thread3": {
+      "main": [
+        [
+          {
+            "node": "🔍 Check Reply (Email 3 Gate)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "11f10bdc-ed07-4f0f-9679-0b61f9fc3233",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7a71f6c5d15048fa3797635dbb699e3d0738eb361fa56fd1f82afa80e8d9d53e"
+  },
+  "id": "w2jM2lr2oguxfV3Z",
+  "tags": []
+}
